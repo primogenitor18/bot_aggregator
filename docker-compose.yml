@@ -1,7 +1,7 @@
 version: '3'
 services:
   osint_client_nginx:
-    image: osint_frontend:latest
+    image: nginx:1.25
     container_name: osint_client_nginx
     volumes:
       - ./nginx/extend:/etc/nginx/conf.d
@@ -11,6 +11,12 @@ services:
       - 443:443
     depends_on:
       - osint_client_backend
+    networks:
+      - osint_client-network
+
+  osint_client_frontend:
+    image: osint_frontend:latest
+    container_name: osint_client_frontend
     networks:
       - osint_client-network
 
