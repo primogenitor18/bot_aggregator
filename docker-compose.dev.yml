@@ -1,0 +1,54 @@
+version: '3'
+services:
+  osint_client_nginx:
+    image: nginx:latest
+    container_name: osint_client_nginx
+    volumes:
+      - ./nginx/extend:/etc/nginx/conf.d
+    ports:
+      - 80:80
+    depends_on:
+      - osint_client_backend
+    networks:
+      - osint_client-network
+
+  osint_client_backend:
+    image: osint_client:latest
+    container_name: osint_client_backend
+    build: ./
+    environment:
+      - DB_PASSWORD=osint_client
+      - DB_USER=osint_client
+      - DB_NAME=osint_client
+      - DB_HOST=osint_client_db
+    networks:
+      - osint_client-network
+    depends_on:
+      - osint_client_db
+    ports:
+      - 8000:8000
+    volumes:
+      - ./:/app
+    command: uvicorn main:app --host 0.0.0.0 --root-path /api --port 8000 --reload
+
+  osint_client_db:
+    image: postgres:15
+    container_name: osint_client_db
+    environment:
+      - POSTGRES_PASSWORD=osint_client
+      - POSTGRES_USER=osint_client
+      - POSTGRES_DB=osint_client
+    networks:
+      - osint_client-network
+    ports:
+      - 5432:5432
+    volumes:
+      - ../osint_client_db:/var/lib/postgresql/data
+
+networks:
+  osint_client-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 18.98.5.0/24
