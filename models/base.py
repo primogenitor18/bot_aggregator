@@ -44,17 +44,6 @@ class BaseModel:
                 continue
         return res
 
-
-class AnonymousUser(BaseModel):
-    id = 0
-    username = "anonymous"
-    password = ""
-    role = 0
-
-    @property
-    def is_anonymous(self):
-        return True
-
     @property
     def role_str(self) -> str:
         role_obj = [
@@ -65,6 +54,17 @@ class AnonymousUser(BaseModel):
         if not role_obj:
             return ""
         return role_obj[0]
+
+
+class AnonymousUser(BaseModel):
+    id = 0
+    username = "anonymous"
+    password = ""
+    role = 0
+
+    @property
+    def is_anonymous(self):
+        return True
 
 
 class DefaultRoles(Enum):
