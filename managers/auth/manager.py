@@ -25,7 +25,9 @@ class AuthManager:
         self._user: Union[User, AnonymousUser] = AnonymousUser()
 
     @classmethod
-    async def create_user(cls, username: str, password: str = "") -> Tuple[User, str]:
+    async def create_user(
+        cls, username: str, password: str = "", role: DefaultRoles = DefaultRoles.admin
+    ) -> Tuple[User, str]:
         if not cls.verify_password_strengh(password):
             password = password_gen()
         salt = uuid.uuid4().hex
@@ -33,7 +35,7 @@ class AuthManager:
             user = User(
                 username=username,
                 password=f"{password_hash(password, salt)}${salt}",
-                role=DefaultRoles.admin.value,
+                role=role.value,
             )
             s.add(user)
             await s.flush()
