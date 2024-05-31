@@ -1,26 +1,34 @@
 import uuid
 
-from typing import List, Tuple
+from typing import List, Tuple, Union
 from types import MappingProxyType
 
 from sqlalchemy.future import select
 
 from models.session import AsyncSession
-from models.models import Provider
+from models.models import Provider, User
+from models.base import AnonymousUser
 
 from third_party.quick_osint import QuickOsintRequest
 
 
 class ProviderManager:
-    def __init__(self, name: str, s: AsyncSession):
+    def __init__(
+        self, name: str, s: AsyncSession, user: Union[User, AnonymousUser] = AnonymousUser()
+    ):
         self.name = name
         self.session = s
         self.provider = None
+        self.user = user
 
     async def get_provider(self) -> Provider:
         self.provider = (
             await self.session.execute(
-                select(Provider).filter(Provider.name == self.name)
+                select(Provider)
+                .filter(
+                    Provider.name == self.name,
+                    Provider.accessed_role <= self.user.role,
+                )
             )
         ).scalars().first()
         return self.provider
@@ -33,8 +41,10 @@ class ProviderManager:
         return self.provider
 
     @classmethod
-    async def constructor(cls, name: str, s: AsyncSession) -> "ProviderManager":
-        obj = cls(name, s)
+    async def constructor(
+        cls, name: str, s: AsyncSession, user: Union[User, AnonymousUser] = AnonymousUser()
+    ) -> "ProviderManager":
+        obj = cls(name, s, user)
         await obj.get_provider()
         return obj
 
@@ -45,10 +55,14 @@ class ProviderManager:
             self.provider.auth_token = auth_token
         await self.session.commit()
 
-    @classmethod
-    async def get_providers(cls, s: AsyncSession) -> List[Provider]:
+    async def get_providers(self, s: AsyncSession) -> List[Provider]:
         providers = (
-            await s.execute(select(Provider))
+            await s.execute(
+                select(Provider)
+                .filter(
+                    Provider.accessed_role <= self.user.role,
+                )
+            )
         ).scalars().all()
         return providers
 

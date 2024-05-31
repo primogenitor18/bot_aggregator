@@ -47,6 +47,7 @@ class Provider(Base, BaseModel):
     auth_token: Mapped[str] = mapped_column(
         String(2048), nullable=False
     )
+    accessed_role: Mapped[int] = mapped_column(Integer(), default=0, server_default="0")  # DefaultRoles
 
     __table_args__ = (
         UniqueConstraint("name", "auth_token", name="uc_name_auth_token"),

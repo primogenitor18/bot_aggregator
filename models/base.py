@@ -60,7 +60,7 @@ class AnonymousUser(BaseModel):
     id = 0
     username = "anonymous"
     password = ""
-    role = 0
+    role = -1
 
     @property
     def is_anonymous(self):

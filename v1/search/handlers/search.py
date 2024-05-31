@@ -48,7 +48,7 @@ async def provider_manage_method(
     status_code: Optional[Any] = Header(status.HTTP_200_OK, description="internal usage, not used by client"),
 ) -> Union[SearchResponse, Error40xResponse]:
     async with get_session() as s:
-        manager = SearchManager(s)
+        manager = SearchManager(s, user)
         res, st = await manager.search(
             search.fts, search.provider, search.country, search.search_type
         )

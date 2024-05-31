@@ -1,25 +1,33 @@
 import uuid
 import urllib.parse
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 from types import MappingProxyType
 
 from sqlalchemy.future import select
 
-from models.session import get_session, AsyncSession
-from models.models import Provider
+from models.session import AsyncSession
+from models.models import Provider, User
+from models.base import AnonymousUser
 
 from third_party.quick_osint import QuickOsintRequest
 from third_party.himera_search import HimeraSearchRequest
 
 
 class SearchManager:
-    def __init__(self, s: AsyncSession):
+    def __init__(
+        self, s: AsyncSession, user: Union[User, AnonymousUser] = AnonymousUser()
+    ):
         self.session = s
+        self.user = user
 
     async def _get_provider_info(self, provider: str) -> Optional[Provider]:
         return (
             await self.session.execute(
-                select(Provider).filter(Provider.name == provider)
+                select(Provider)
+                .filter(
+                    Provider.name == provider,
+                    Provider.accessed_role <= self.user.role,
+                )
             )
         ).scalars().first()
 
@@ -62,13 +70,7 @@ class SearchManager:
         if not obj:
             return res, False
         st, search_res = await obj.search(fts, search_type)
-        for k, v in search_res.items():
-            _sr_data = v.get("data", [])
-            if not _sr_data:
-                continue
-            item_body = _sr_data[0]
-            item_body["report"] = v.get("url")
-            res["items"].append(item_body)
+        res["items"] = search_res.get("data", {}).values()
         return res, True
 
     async def search(

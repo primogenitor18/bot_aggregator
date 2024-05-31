@@ -49,7 +49,7 @@ async def provider_manage_method(
     status_code: Optional[Any] = Header(status.HTTP_200_OK, description="internal usage, not used by client"),
 ) -> Union[ProviderResponse, Error40xResponse]:
     async with get_session() as s:
-        manager = await ProviderManager.constructor(provider.name, s)
+        manager = await ProviderManager.constructor(provider.name, s, user)
         await manager.update_auth(provider.auth_token)
         return ProviderResponse(
             name=manager.provider.name, auth_token=manager.provider.auth_token
@@ -72,11 +72,11 @@ async def provider_manage_method(
 async def providers_list_method(
     request: Request,
     response: Response,
-    user: User = Depends(check_admin),
+    user: User = Depends(check_auth),
     status_code: Optional[Any] = Header(status.HTTP_200_OK, description="internal usage, not used by client"),
 ) -> Union[List[ProviderResponse], Error40xResponse]:
     async with get_session() as s:
-        providers = await ProviderManager.get_providers(s)
+        providers = await ProviderManager("", s, user).get_providers(s)
         return [
             ProviderResponse(name=p.name)
             for p in providers
@@ -103,7 +103,7 @@ async def providers_full_list_method(
     status_code: Optional[Any] = Header(status.HTTP_200_OK, description="internal usage, not used by client"),
 ) -> Union[List[ProviderResponse], Error40xResponse]:
     async with get_session() as s:
-        providers = await ProviderManager.get_providers(s)
+        providers = await ProviderManager("", s, user).get_providers(s)
         return [
             ProviderFullResponse(
                 name=p.name, auth_token=p.auth_token
@@ -136,7 +136,7 @@ async def provider_info_method(
         response.status_code = status.HTTP_400_BAD_REQUEST
         return Error40xResponse(reason="provider not defined")
     async with get_session() as s:
-        manager = ProviderManager(provider, s)
+        manager = ProviderManager(provider, s, user)
         if hasattr(manager, f"get_{provider}_user_info"):
             method = getattr(manager, f"get_{provider}_user_info")
             st, res = await method()
