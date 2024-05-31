@@ -46,13 +46,10 @@ async def provider_manage_method(
     response: Response,
     user: User = Depends(check_auth),
     status_code: Optional[Any] = Header(status.HTTP_200_OK, description="internal usage, not used by client"),
-) -> Union[List[SearchResponse], Error40xResponse]:
-    response = list()
+) -> Union[SearchResponse, Error40xResponse]:
     async with get_session() as s:
         manager = SearchManager(s)
-        res, st = await manager.quickosintrequest(search.fts)
-        if st:
-            response.append(
-                SearchResponse(provider_name="quickosint", data=res.get("items", []))
-            )
-        return response
+        res, st = await manager.search(
+            search.fts, search.provider, search.country, search.search_type
+        )
+        return SearchResponse(provider_name=search.provider, data=res.get("items", []))

@@ -1,9 +1,14 @@
-from typing import List
+import uuid
+
+from typing import List, Tuple
+from types import MappingProxyType
 
 from sqlalchemy.future import select
 
 from models.session import AsyncSession
 from models.models import Provider
+
+from third_party.quick_osint import QuickOsintRequest
 
 
 class ProviderManager:
@@ -46,3 +51,16 @@ class ProviderManager:
             await s.execute(select(Provider))
         ).scalars().all()
         return providers
+
+    async def get_quickosint_user_info(self) -> Tuple[int, dict]:
+        await self.get_provider()
+        obj = QuickOsintRequest(
+            "https://quickosintapi.com/api/v1/identity/userinfo",
+            headers=MappingProxyType(
+                {
+                    "Authorization": f"Bearer {self.provider.auth_token}",
+                    "X-ClientId": uuid.uuid4().hex,
+                }
+            ),
+        )
+        return await obj.get_user_info()
