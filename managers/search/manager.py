@@ -70,7 +70,7 @@ class SearchManager:
         if not obj:
             return res, False
         st, search_res = await obj.search(fts, search_type)
-        res["items"] = search_res.get("data", {}).values()
+        res["items"] = search_res.get(search_type).get("data", {}).values()
         return res, True
 
     async def search(
