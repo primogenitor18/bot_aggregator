@@ -13,7 +13,7 @@ class HimeraSearchRequest(ThirdPartyRequest):
     def __init__(
         self,
         api_key: str,
-        url: str = "https://api.himera-search.info/2.0/",
+        url: str = "https://api.himera-search.info/2.0",
         path_params: MappingProxyType = MappingProxyType({}),
         headers: MappingProxyType = MappingProxyType({}),
         **kwargs,

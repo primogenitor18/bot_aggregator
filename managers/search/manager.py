@@ -81,4 +81,4 @@ class SearchManager:
         search_type: str = "name",
     ) -> Tuple[dict, bool]:
         method = getattr(self, f"{provider}request")
-        return await method(fts, country, search_type)
+        return await method(fts=fts, country=country, search_type=search_type)
