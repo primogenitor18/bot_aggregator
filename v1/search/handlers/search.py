@@ -52,4 +52,7 @@ async def provider_manage_method(
         res, st = await manager.search(
             search.fts, search.provider, search.country, search.search_type
         )
-        return SearchResponse(provider_name=search.provider, data=res.get("items", []))
+        return SearchResponse(
+            provider_name=search.provider,
+            data=[i for i in res.get("items", []) if isinstance(i, dict)],
+        )
