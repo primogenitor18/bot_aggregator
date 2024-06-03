@@ -76,6 +76,14 @@ class HimeraSearchRequest(ThirdPartyRequest):
         self.url = self.base_url
         return st, res
 
+    async def _pasport_search(self, fts: str, *args, **kwargs) -> Tuple[int, dict]:
+        self.url = f"{self.base_url}/passport"
+        st, res = await self.request(
+            "post", MappingProxyType({"passport": fts}),
+        )
+        self.url = self.base_url
+        return st, res
+
     async def _key_search(self, key: str, fts: str, *args, **kwargs) -> Tuple[int, dict]:
         self.url = f"{self.base_url}/{key}"
         st, res = await self.request(
