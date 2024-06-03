@@ -70,7 +70,10 @@ class SearchManager:
         if not obj:
             return res, False
         st, search_res = await obj.search(fts, search_type)
-        res["items"] = search_res.get(search_type).get("data", {}).values()
+        _items = search_res.get(search_type, {}).get("data", {})
+        if isinstance(_items, dict):
+            _items = list(_items.values())
+        res["items"] = _items
         return res, True
 
     async def search(
