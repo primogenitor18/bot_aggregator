@@ -2,6 +2,7 @@ import uuid
 import urllib.parse
 from typing import Optional, Tuple, Union
 from types import MappingProxyType
+from bs4 import BeautifulSoup
 
 from sqlalchemy.future import select
 
@@ -11,6 +12,7 @@ from models.base import AnonymousUser
 
 from third_party.quick_osint import QuickOsintRequest
 from third_party.himera_search import HimeraSearchRequest
+from third_party.revengee import RevengeeRequest
 
 
 class SearchManager:
@@ -75,6 +77,33 @@ class SearchManager:
             _items = list(_items.values())
         res["items"] = _items
         return res, True
+
+    def _parse_revengee_response(self, html_doc: str) -> list:
+        if not html_doc:
+            return list()
+        soup = BeautifulSoup(html_doc, "html.parser")
+        res = list()
+        for i, row in enumerate(soup.tbody.find_all("tr", class_="search-result")):
+            columns = row.find_all("td")
+            link = columns[1].find("a")
+            _item = {
+                "link": "https://reveng.ee{}".format(link.get("href")) if link else None
+            }
+            person_info = {"Source": columns[-2].get_text().replace("\n", "")}
+            for r in columns[2].find_all("tr"):
+                cs = r.find_all("td")
+                person_info[cs[0].get_text().replace("\n", "")] = cs[1].get_text().replace("\n", "")
+            _item.update(person_info)
+            res.append(_item.copy())
+        return res
+
+    async def get_obj_revengeerequest(self, fts: str) -> RevengeeRequest:
+        return RevengeeRequest()
+
+    async def revengeerequest(self, fts: str, *args, **kwargs) -> Tuple[dict, bool]:
+        obj = await self.get_obj_revengeerequest(fts)
+        st, search_res = await obj.search(fts)
+        return {"items": self._parse_revengee_response(search_res.get("response", ""))}, True
 
     async def search(
         self,
