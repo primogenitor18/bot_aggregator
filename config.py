@@ -16,14 +16,14 @@ DB_PORT = int(os.environ.get("DB_PORT", "5432"))
 
 WEBSOCKET_CHANNEL = os.environ.get("WEBSOCKET_CHANNEL", "websocket_channel")
 
-TG_API_ID = os.environ.get("TG_API_ID")
-if not TG_API_ID:
-    raise Exception("TG_API_ID not defined")
-TG_API_HASH = os.environ.get("TG_API_HASH")
-if not TG_API_HASH:
-    raise Exception("TG_API_HASH not defined")
-TG_PHONE = os.environ.get("TG_PHONE")
-if not TG_PHONE:
-    raise Exception("TG_PHONE not defined")
-
 USE_TELETHON = bool(int(os.environ.get("USE_TELETHON", 0)))
+if USE_TELETHON:
+    TG_API_ID = os.environ.get("TG_API_ID")
+    if not TG_API_ID:
+        raise Exception("TG_API_ID not defined")
+    TG_API_HASH = os.environ.get("TG_API_HASH")
+    if not TG_API_HASH:
+        raise Exception("TG_API_HASH not defined")
+    TG_PHONE = os.environ.get("TG_PHONE")
+    if not TG_PHONE:
+        raise Exception("TG_PHONE not defined")
