@@ -29,6 +29,10 @@ services:
       - DB_USER=${POSTGRES_USER}
       - DB_NAME=${POSTGRES_DB}
       - DB_HOST=osint_client_db
+      - TG_API_ID=${TG_API_ID}
+      - TG_API_HASH=${TG_API_HASH}
+      - TG_PHONE=${TG_PHONE}
+      - USE_TELETHON=${USE_TELETHON}
     networks:
       - osint_client-network
     depends_on:
@@ -36,6 +40,29 @@ services:
     volumes:
       - ./:/app
     command: uvicorn main:app --host 0.0.0.0 --root-path /api --port 8000 --workers 6
+
+  osint_client_backend_websocket:
+    image: osint_client:latest
+    container_name: osint_client_backend_websocket
+    build: ./
+    environment:
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_USER=${POSTGRES_USER}
+      - DB_NAME=${POSTGRES_DB}
+      - DB_HOST=osint_client_db
+      - TG_API_ID=${TG_API_ID}
+      - TG_API_HASH=${TG_API_HASH}
+      - TG_PHONE=${TG_PHONE}
+      - USE_TELETHON=${USE_TELETHON}
+    networks:
+      - osint_client-network
+    depends_on:
+      - osint_client_db
+    ports:
+      - 5678:5678
+    volumes:
+      - ./:/app
+    command: sh -c 'cd websocket; uvicorn main:app --host 0.0.0.0 --port 5678'
 
   osint_client_db:
     image: postgres:15
