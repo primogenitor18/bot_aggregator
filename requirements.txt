@@ -48,3 +48,5 @@ psycopg2==2.9.9
 asyncpg==0.29.0
 PyJWT==2.8.0
 beautifulsoup4==4.12.2
+async-timeout==4.0.3
+git+https://github.com/Oper18/aioredis-py.git

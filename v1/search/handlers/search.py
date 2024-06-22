@@ -7,6 +7,7 @@ from fastapi import (
     Header,
     Request,
     Depends,
+    BackgroundTasks,
 )
 
 from v1.search.models.request import SearchRequest
@@ -44,13 +45,20 @@ async def provider_manage_method(
     request: Request,
     search: SearchRequest,
     response: Response,
+    background_tasks: BackgroundTasks,
     user: User = Depends(check_auth),
     status_code: Optional[Any] = Header(status.HTTP_200_OK, description="internal usage, not used by client"),
 ) -> Union[SearchResponse, Error40xResponse]:
     async with get_session() as s:
         manager = SearchManager(s, user)
         res, st = await manager.search(
-            search.fts, search.provider, search.country, search.search_type
+            search.fts,
+            search.provider,
+            search.country,
+            search.search_type,
+            request.headers.get("SocketId", 0),
+            request.user.id,
+            background_tasks,
         )
         return SearchResponse(
             provider_name=search.provider,

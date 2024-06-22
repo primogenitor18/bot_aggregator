@@ -33,10 +33,12 @@ services:
       - TG_API_HASH=${TG_API_HASH}
       - TG_PHONE=${TG_PHONE}
       - USE_TELETHON=${USE_TELETHON}
+      - REDIS_URI=osint_client_redis
     networks:
       - osint_client-network
     depends_on:
       - osint_client_db
+      - osint_client_redis
     volumes:
       - ./:/app
     command: uvicorn main:app --host 0.0.0.0 --root-path /api --port 8000 --workers 6
@@ -54,10 +56,12 @@ services:
       - TG_API_HASH=${TG_API_HASH}
       - TG_PHONE=${TG_PHONE}
       - USE_TELETHON=${USE_TELETHON}
+      - REDIS_URI=osint_client_redis
     networks:
       - osint_client-network
     depends_on:
       - osint_client_db
+      - osint_client_redis
     ports:
       - 5678:5678
     volumes:
@@ -75,6 +79,12 @@ services:
       - osint_client-network
     volumes:
       - ../osint_client_db:/var/lib/postgresql/data
+
+  osint_client_redis:
+    image: redis:latest
+    container_name: osint_client_redis
+    networks:
+      - osint_client-network
 
 networks:
   osint_client-network:

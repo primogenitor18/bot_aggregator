@@ -2,7 +2,7 @@ import hashlib
 import string
 import random
 import uuid
-from typing import Optional, Union
+from typing import Union
 
 from sqlalchemy import and_
 from sqlalchemy.future import select

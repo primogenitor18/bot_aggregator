@@ -8,8 +8,6 @@ import asyncio
 import traceback
 from contextlib import asynccontextmanager
 
-from enum import Enum
-
 from typing import Dict, List, Union
 
 from fastapi import FastAPI, WebSocket, Query, WebSocketDisconnect
@@ -22,12 +20,21 @@ from managers.auth.manager import AuthManager
 
 from third_party.telethon_client import TelethonRequest
 
-from config import USE_TELETHON
+from config import (
+    USE_TELETHON,
+    REDIS_URI,
+    REDIS_PORT,
+    REDIS_PUBSUB_DB,
+    WEBSOCKET_CHANNEL,
+)
 
+from redis.wrapper import (
+    QueueManager,
+    RedisConnectionInfo,
+    RedisConnectionTransportInfo,
+)
 
-class SocketEvent(Enum):
-    connect = "connect"
-    code_request = "code_request"
+from websocket.consts import SocketEvent
 
 
 class ConnectionManager:
@@ -44,6 +51,38 @@ class ConnectionManager:
             await obj.send_code_request()
             data = await websocket.receive_json()
             await obj.logging_in(data.get("token", ""))
+
+    @QueueManager(
+        [
+            RedisConnectionInfo(
+                name="pubsub_connection",
+                host=REDIS_URI,
+                port=REDIS_PORT,
+                db=REDIS_PUBSUB_DB,
+                connections=[
+                    RedisConnectionTransportInfo(
+                        name="redis_pubsub_con",
+                        conn_type="create_channel",
+                        channel=WEBSOCKET_CHANNEL,
+                        main_listener=True,
+                    ),
+                ],
+                main_listener=True,
+            ),
+        ],
+    )
+    async def read_queue_message(
+        self,
+        message: dict,
+        **kwargs,
+    ) -> None:
+        print("Get message: ", message)
+        await self.broadcast(
+            data=message.get("message", {}),
+            recipients_ids=message.get("recipients", []),
+            target_sockets=[str(s) for s in message.get("target_sockets", []) if s],
+            except_sockets=[str(s) for s in message.get("except_sockets", []) if s],
+        )
 
     async def connect(
             self, websocket: WebSocket, user: User
@@ -130,6 +169,7 @@ class ConnectionManager:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.manager = ConnectionManager()
+    app.listener_task = asyncio.create_task(app.manager.read_queue_message())
     yield
     app.listener_task.cancel()
     try:

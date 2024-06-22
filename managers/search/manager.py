@@ -4,6 +4,8 @@ from typing import Optional, Tuple, Union
 from types import MappingProxyType
 from bs4 import BeautifulSoup
 
+from fastapi import BackgroundTasks
+
 from sqlalchemy.future import select
 
 from models.session import AsyncSession
@@ -13,6 +15,8 @@ from models.base import AnonymousUser
 from third_party.quick_osint import QuickOsintRequest
 from third_party.himera_search import HimeraSearchRequest
 from third_party.revengee import RevengeeRequest
+
+from tasks.tg_bot_parse import run_bot_parsing
 
 
 class SearchManager:
@@ -105,12 +109,37 @@ class SearchManager:
         st, search_res = await obj.search(fts)
         return {"items": self._parse_revengee_response(search_res.get("response", ""))}, True
 
+    async def poiskchelovekatelefonubotrequest(
+        self,
+        fts: str,
+        search_type: str,
+        socket_id: int,
+        user_id: int,
+        background_tasks: Optional[BackgroundTasks] = None,
+        *args,
+        **kwargs,
+    ) -> Tuple[dict, bool]:
+        if not socket_id or not user_id or not background_tasks:
+            return {"items": [{"response": "No data"}]}, True
+        background_tasks.add_task(run_bot_parsing, fts, search_type, socket_id, user_id)
+        return {"items": [{"response": "Search in progress..."}]}, True
+
     async def search(
         self,
         fts: str,
         provider: str = "quickosint",
         country: str = "RU",
         search_type: str = "name",
+        socket_id: int = 0,
+        user_id: int = 0,
+        background_tasks: Optional[BackgroundTasks] = None,
     ) -> Tuple[dict, bool]:
         method = getattr(self, f"{provider}request")
-        return await method(fts=fts, country=country, search_type=search_type)
+        return await method(
+            fts=fts,
+            country=country,
+            search_type=search_type,
+            socket_id=socket_id,
+            user_id=user_id,
+            background_tasks=background_tasks,
+        )

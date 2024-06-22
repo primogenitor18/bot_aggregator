@@ -27,3 +27,8 @@ if USE_TELETHON:
         raise Exception("TG_API_HASH not defined")
     if not TG_PHONE:
         raise Exception("TG_PHONE not defined")
+
+REDIS_URI = os.environ.get("REDIS_URI", "")
+REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
+REDIS_DB = os.environ.get("REDIS_DB", 0)
+REDIS_PUBSUB_DB = os.environ.get("REDIS_PUBSUB_DB", 2)

@@ -17,6 +17,7 @@ services:
     container_name: osint_client_backend
     build: ./
     environment:
+      - PYTHONUNBUFFERED=1
       - DB_PASSWORD=osint_client
       - DB_USER=osint_client
       - DB_NAME=osint_client
@@ -25,6 +26,7 @@ services:
       - TG_API_HASH=20f7fa4cd6ba12ba52c49629af3b5c3f
       - TG_PHONE=+38268381500
       - USE_TELETHON=0
+      - REDIS_URI=osint_client_redis
     networks:
       - osint_client-network
     depends_on:
@@ -40,6 +42,7 @@ services:
     container_name: osint_client_backend_websocket
     build: ./
     environment:
+      - PYTHONUNBUFFERED=1
       - DB_PASSWORD=osint_client
       - DB_USER=osint_client
       - DB_NAME=osint_client
@@ -48,6 +51,7 @@ services:
       - TG_API_HASH=20f7fa4cd6ba12ba52c49629af3b5c3f
       - TG_PHONE=+38268381500
       - USE_TELETHON=0
+      - REDIS_URI=osint_client_redis
     networks:
       - osint_client-network
     depends_on:
@@ -71,6 +75,12 @@ services:
       - 5432:5432
     volumes:
       - ../osint_client_db:/var/lib/postgresql/data
+
+  osint_client_redis:
+    image: redis:latest
+    container_name: osint_client_redis
+    networks:
+      - osint_client-network
 
 networks:
   osint_client-network:
