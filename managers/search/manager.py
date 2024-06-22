@@ -18,6 +18,8 @@ from third_party.revengee import RevengeeRequest
 
 from tasks.tg_bot_parse import run_bot_parsing
 
+from config import USE_TELETHON
+
 
 class SearchManager:
     def __init__(
@@ -119,7 +121,7 @@ class SearchManager:
         *args,
         **kwargs,
     ) -> Tuple[dict, bool]:
-        if not socket_id or not user_id or not background_tasks:
+        if not socket_id or not user_id or not background_tasks or not USE_TELETHON:
             return {"items": [{"response": "No data"}]}, True
         background_tasks.add_task(run_bot_parsing, fts, search_type, socket_id, user_id)
         return {"items": [{"response": "Search in progress..."}]}, True
