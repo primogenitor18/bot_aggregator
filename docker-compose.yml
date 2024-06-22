@@ -44,7 +44,7 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --root-path /api --port 8000 --workers 6
 
   osint_client_backend_websocket:
-    image: osint_client:latest
+    image: osint_backend:latest
     container_name: osint_client_backend_websocket
     build: ./
     environment:
