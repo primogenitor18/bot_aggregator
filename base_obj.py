@@ -12,6 +12,8 @@ from config import LOCAL_SALT, WEBSOCKET_CHANNEL
 from models.models import User
 from models.session import AsyncSession
 
+from websocket.consts import SocketAction
+
 
 def password_hash(password, salt):
     return hashlib.sha512(
@@ -34,6 +36,7 @@ async def send_socket_event(
     exclude_users: list = [],
     only_accept_users: bool = False,
     target_sockets: list = [],
+    action: SocketAction = SocketAction.message,
 ):
     if only_accept_users:
         recipients_filter = User.id.in_(accept_users)
@@ -52,5 +55,6 @@ async def send_socket_event(
             "target_sockets": target_sockets,
             "recipients": recipients,
             "message": data,
+            "action": action.value,
         },
     )

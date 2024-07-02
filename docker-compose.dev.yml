@@ -25,7 +25,7 @@ services:
       - TG_API_ID=24285166
       - TG_API_HASH=20f7fa4cd6ba12ba52c49629af3b5c3f
       - TG_PHONE=+38268381500
-      - USE_TELETHON=0
+      - USE_TELETHON=1
       - REDIS_URI=osint_client_redis
     networks:
       - osint_client-network
@@ -50,7 +50,7 @@ services:
       - TG_API_ID=24285166
       - TG_API_HASH=20f7fa4cd6ba12ba52c49629af3b5c3f
       - TG_PHONE=+38268381500
-      - USE_TELETHON=0
+      - USE_TELETHON=1
       - REDIS_URI=osint_client_redis
     networks:
       - osint_client-network

@@ -34,23 +34,53 @@ from redis.wrapper import (
     RedisConnectionTransportInfo,
 )
 
-from websocket.consts import SocketEvent
+from websocket.consts import (
+    SocketEvent,
+    SocketExchangeMessage,
+    SocketMessage,
+    SocketAction,
+)
+
+from managers.search.tg_bots.poisk_cheloveka_telefonubot import PoiskChelovekaTelefonuBot
 
 
 class ConnectionManager:
+    _actions = {
+        "search": {PoiskChelovekaTelefonuBot._name: PoiskChelovekaTelefonuBot}
+    }
 
     def __init__(self):
         self.active_connections: Dict[int, List[WebSocket]] = dict()
         self.active_users: Dict[int, User] = dict()
+        self.obj = TelethonRequest(None)
 
     async def check_telethon_session(self, websocket: WebSocket) -> None:
-        obj = TelethonRequest(None)
-
-        if not await obj.is_logged_in():
+        if not await self.obj.is_logged_in():
             await self.send(websocket, {"event_type": SocketEvent.code_request.value})
-            await obj.send_code_request()
+            await self.obj.send_code_request()
             data = await websocket.receive_json()
-            await obj.logging_in(data.get("token", ""))
+            await self.obj.logging_in(data.get("token", ""))
+
+    async def run_task(self, message: SocketExchangeMessage) -> None:
+        if not message.message.task_data:
+            return
+        parse_obj = self._actions.get(
+            message.message.task_data.action, {}
+        ).get(message.message.task_data.target)
+        if not parse_obj:
+            return
+        instance = parse_obj(self.obj)
+        res = await instance.search(**message.message.task_data.kwargs)
+        await self.broadcast(
+            data={
+                "event_type": message.message.event_type.value,
+                "name": parse_obj._name,
+                "data": res,
+            },
+            recipients_ids=message.recipients,
+            target_sockets=[str(s) for s in message.target_sockets if s],
+            except_sockets=[str(s) for s in message.except_sockets if s],
+        )
 
     @QueueManager(
         [
@@ -76,13 +106,18 @@ class ConnectionManager:
         message: dict,
         **kwargs,
     ) -> None:
-        print("Get message: ", message)
-        await self.broadcast(
-            data=message.get("message", {}),
-            recipients_ids=message.get("recipients", []),
-            target_sockets=[str(s) for s in message.get("target_sockets", []) if s],
-            except_sockets=[str(s) for s in message.get("except_sockets", []) if s],
-        )
+        if not message:
+            return
+        message = SocketExchangeMessage.validate(message)
+        if message.action.value == SocketAction.task.value:
+            await self.run_task(message)
+        else:
+            await self.broadcast(
+                data=message.message.dict(),
+                recipients_ids=message.recipients,
+                target_sockets=[str(s) for s in message.target_sockets if s],
+                except_sockets=[str(s) for s in message.except_sockets if s],
+            )
 
     async def connect(
             self, websocket: WebSocket, user: User

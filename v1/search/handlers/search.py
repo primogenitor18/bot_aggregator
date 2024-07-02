@@ -59,6 +59,7 @@ async def provider_manage_method(
             request.headers.get("SocketId", 0),
             request.user.id,
             background_tasks,
+            redis_connection=request.app.redis_pubsub_con,
         )
         return SearchResponse(
             provider_name=search.provider,

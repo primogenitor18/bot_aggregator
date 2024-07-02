@@ -20,6 +20,10 @@ from tasks.tg_bot_parse import run_bot_parsing
 
 from config import USE_TELETHON
 
+from base_obj import send_socket_event
+from websocket.consts import SocketEvent, SocketAction
+from managers.search.tg_bots.poisk_cheloveka_telefonubot import PoiskChelovekaTelefonuBot
+
 
 class SearchManager:
     def __init__(
@@ -89,7 +93,10 @@ class SearchManager:
             return list()
         soup = BeautifulSoup(html_doc, "html.parser")
         res = list()
-        for i, row in enumerate(soup.tbody.find_all("tr", class_="search-result")):
+        tbody = soup.tbody
+        if not tbody:
+            return res
+        for i, row in enumerate(tbody.find_all("tr", class_="search-result")):
             columns = row.find_all("td")
             link = columns[1].find("a")
             _item = {
@@ -123,7 +130,24 @@ class SearchManager:
     ) -> Tuple[dict, bool]:
         if not socket_id or not user_id or not background_tasks or not USE_TELETHON:
             return {"items": [{"response": "No data"}]}, True
-        background_tasks.add_task(run_bot_parsing, fts, search_type, socket_id, user_id)
+        #  background_tasks.add_task(run_bot_parsing, fts, search_type, socket_id, user_id)
+        await send_socket_event(
+            redis_pubsub_con=kwargs["redis_connection"],
+            s=self.session,
+            data={
+                "event_type": SocketEvent.tg_bot_parse_result.value,
+                "name": "",
+                "data": list(),
+                "task_data": {
+                    "action": "search",
+                    "target": PoiskChelovekaTelefonuBot._name,
+                    "kwargs": {"fts": fts, "search_type": search_type},
+                }
+            },
+            target_sockets=[socket_id],
+            accept_users=[user_id],
+            action=SocketAction.task,
+        )
         return {"items": [{"response": "Search in progress..."}]}, True
 
     async def search(
@@ -135,6 +159,8 @@ class SearchManager:
         socket_id: int = 0,
         user_id: int = 0,
         background_tasks: Optional[BackgroundTasks] = None,
+        *args,
+        **kwargs,
     ) -> Tuple[dict, bool]:
         method = getattr(self, f"{provider}request")
         return await method(
@@ -144,4 +170,6 @@ class SearchManager:
             socket_id=socket_id,
             user_id=user_id,
             background_tasks=background_tasks,
+            *args,
+            **kwargs,
         )
