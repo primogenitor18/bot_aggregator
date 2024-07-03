@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass, field
 from collections import defaultdict
+from bs4 import BeautifulSoup
 
 from typing import List, Optional, Type
 
@@ -28,7 +29,7 @@ class EventHandler:
         self.event = event
         self.fts = fts
         self.rules = rules
-        self.result = dict()
+        self.result = list()
 
     def _find_button(self, text: str) -> Optional[MessageButton]:
         for button in self.event.message.buttons:
@@ -50,7 +51,8 @@ class EventHandler:
         await self.event.client.send_message(self.event.chat, self.fts)
 
     async def save_result(self) -> None:
-        self.result = self.message_to_dict()
+        #  self.result = [self.message_to_dict()]
+        await self.parse_report()
         await self.disconnect()
 
     async def get_action(self) -> None:
@@ -59,6 +61,18 @@ class EventHandler:
                 method = getattr(self, rule.action, None)
                 if method:
                     await method(**rule.parameters)
+
+    async def parse_report(self) -> list:
+        report_data = await self.event.message.download_media(file=bytes)
+        report_content = report_data.decode("utf-8")
+
+        soup = BeautifulSoup(report_content, "html.parser")
+
+        for card in soup.find_all("div", class_="db"):
+            _obj = dict()
+            for row in card.find_all("div", class_="row"):
+                _obj[row.find("div", class_="row_left").string] = row.find("div", class_="row_right").string
+            self.result.append(_obj.copy())
 
     def message_to_dict(self) -> dict:
         res = dict()

@@ -24,7 +24,7 @@ class PoiskChelovekaTelefonuBot:
     async def search(self, fts: str, search_type: str) -> list:
         _btn_text = self._buttons_search_type_map.get(search_type)
         if not _btn_text:
-            return dict()
+            return list()
     
         async with self.obj.client:
             entity = await self.obj.client.get_entity("@Poisk_Cheloveka_TelefonuBot")
@@ -44,4 +44,4 @@ class PoiskChelovekaTelefonuBot:
             self.obj.client.add_event_handler(handle_obj.handler, events.MessageEdited)
             await self.obj.client.run_until_disconnected()
 
-            return [handle_obj.result]
+            return handle_obj.result
