@@ -7,6 +7,7 @@ from config import (
     TG_API_HASH,
     TG_PHONE,
     BASEDIR,
+    TELETHON_SESSION,
 )
 
 
@@ -34,7 +35,7 @@ class MyTelegramClient(TelegramClient):
 class TelethonRequest:
     def __init__(self, client_callback):
         self.client = MyTelegramClient(
-            session=os.path.join(BASEDIR, "osint_operator"),
+            session=os.path.join(BASEDIR, TELETHON_SESSION),
             api_id=TG_API_ID,
             api_hash=TG_API_HASH,
             code_callback=client_callback,

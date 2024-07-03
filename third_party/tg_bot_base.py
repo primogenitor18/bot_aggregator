@@ -63,7 +63,7 @@ class EventHandler:
     def message_to_dict(self) -> dict:
         res = dict()
         for e in self.event.message.message.split("\n"):
-            s = re.search(r"[0-9a-zA-Zа-яА-Я:\s\+]+", e)
+            s = re.search(r"[0-9a-zA-Zа-яА-Я:]+\s[0-9a-zA-Zа-яА-Я]+", e)
             if not s:
                 continue
             ss = s.group().split(":")
