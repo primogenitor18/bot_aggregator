@@ -28,8 +28,6 @@ class PoiskChelovekaTelefonuBot:
     
         async with self.obj.client:
             entity = await self.obj.client.get_entity("@Poisk_Cheloveka_TelefonuBot")
-            await self.obj.client.send_message(entity, "/start")
-            
             handle_obj = EventHandler(
                 fts=fts,
                 rules=[
@@ -37,11 +35,19 @@ class PoiskChelovekaTelefonuBot:
                     ActionRule(substr="Выберите направление поиска", action="click_button", parameters={"text": _btn_text}),
                     ActionRule(substr="ОТЧЁТ ПО ЗАПРОСУ:", action="save_result", parameters={}),
                     ActionRule(substr="В ответ вы получите информацию по", action="send_message", parameters={}),
+                    ActionRule(substr="Превышен суточный лимит поиска по запросу", action="disconnect", parameters={}),
                 ]
             )
 
             self.obj.client.add_event_handler(handle_obj.handler, events.NewMessage)
             self.obj.client.add_event_handler(handle_obj.handler, events.MessageEdited)
+
+            try:
+                await self.obj.client.send_message(entity, "/start")
+            except ConnectionError:
+                await self.obj.client.connect()
+                await self.obj.client.send_message(entity, "/start")
+
             await self.obj.client.run_until_disconnected()
 
-            return handle_obj.result
+            return handle_obj.result.copy()

@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 
 from typing import List, Optional, Type
 
-from telethon import events
+from telethon import events, errors
 from telethon.tl.custom.messagebutton import MessageButton
 
 
@@ -22,14 +22,19 @@ class ActionRule:
 
 
 class EventHandler:
-    
+
     def __init__(
         self, fts: str, rules: List[ActionRule], event: Optional[Type[events.common.EventBuilder]] = None
     ) -> None:
         self.event = event
         self.fts = fts
         self.rules = rules
-        self.result = list()
+        self._result = list()
+        self._sent_fts_request: bool = False
+
+    @property
+    def result(self) -> list:
+        return self._result
 
     def _find_button(self, text: str) -> Optional[MessageButton]:
         for button in self.event.message.buttons:
@@ -45,13 +50,18 @@ class EventHandler:
         button = self._find_button(text)
         if not button:
             self.event.client.disconnect()
-        await button.click()
+        try:
+            await button.click()
+        except errors.rpcerrorlist.DataInvalidError:
+            pass
 
     async def send_message(self) -> None:
-        await self.event.client.send_message(self.event.chat, self.fts)
+        if not self._sent_fts_request:
+            await self.event.client.send_message(self.event.chat, self.fts)
+            self._sent_fts_request = True
 
     async def save_result(self) -> None:
-        #  self.result = [self.message_to_dict()]
+        #  self._result = [self.message_to_dict()]
         await self.parse_report()
         await self.disconnect()
 
@@ -60,9 +70,15 @@ class EventHandler:
             if rule.check_rule(self.event.raw_text):
                 method = getattr(self, rule.action, None)
                 if method:
-                    await method(**rule.parameters)
+                    try:
+                        await method(**rule.parameters)
+                    except ConnectionError:
+                        await self.event.client.connect()
+                        await method(**rule.parameters)
 
     async def parse_report(self) -> list:
+        if not self.event.message.media:
+            return
         report_data = await self.event.message.download_media(file=bytes)
         report_content = report_data.decode("utf-8")
 
@@ -72,7 +88,7 @@ class EventHandler:
             _obj = dict()
             for row in card.find_all("div", class_="row"):
                 _obj[row.find("div", class_="row_left").string] = row.find("div", class_="row_right").string
-            self.result.append(_obj.copy())
+            self._result.append(_obj.copy())
 
     def message_to_dict(self) -> dict:
         res = dict()

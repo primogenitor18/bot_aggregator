@@ -50,3 +50,6 @@ class TelethonRequest:
 
     async def send_code_request(self) -> None:
         await self.client.send_code_request(TG_PHONE, force_sms=False)
+
+    def __getattr__(self, name: str):
+        return getattr(self.client, name)

@@ -53,6 +53,7 @@ class ConnectionManager:
         self.active_connections: Dict[int, List[WebSocket]] = dict()
         self.active_users: Dict[int, User] = dict()
         self.obj = TelethonRequest(None)
+        self.lock = asyncio.Lock()
 
     async def check_telethon_session(self, websocket: WebSocket) -> None:
         if not await self.obj.is_logged_in():
@@ -60,27 +61,32 @@ class ConnectionManager:
             await self.obj.send_code_request()
             data = await websocket.receive_json()
             await self.obj.logging_in(data.get("token", ""))
+            await self.obj.disconnect()
 
     async def run_task(self, message: SocketExchangeMessage) -> None:
         if not message.message.task_data:
             return
-        parse_obj = self._actions.get(
-            message.message.task_data.action, {}
-        ).get(message.message.task_data.target)
-        if not parse_obj:
-            return
-        instance = parse_obj(self.obj)
-        res = await instance.search(**message.message.task_data.kwargs)
-        await self.broadcast(
-            data={
-                "event_type": message.message.event_type.value,
-                "name": parse_obj._name,
-                "data": res,
-            },
-            recipients_ids=message.recipients,
-            target_sockets=[str(s) for s in message.target_sockets if s],
-            except_sockets=[str(s) for s in message.except_sockets if s],
-        )
+        async with self.lock:
+            parse_obj = self._actions.get(
+                message.message.task_data.action, {}
+            ).get(message.message.task_data.target)
+            if not parse_obj:
+                return
+            instance = parse_obj(self.obj)
+            try:
+                res = await instance.search(**message.message.task_data.kwargs)
+            except Exception:
+                res = [{"message": "Internal error"}]
+            await self.broadcast(
+                data={
+                    "event_type": message.message.event_type.value,
+                    "name": parse_obj._name,
+                    "data": res,
+                },
+                recipients_ids=message.recipients,
+                target_sockets=[str(s) for s in message.target_sockets if s],
+                except_sockets=[str(s) for s in message.except_sockets if s],
+            )
 
     @QueueManager(
         [
