@@ -52,16 +52,20 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[int, List[WebSocket]] = dict()
         self.active_users: Dict[int, User] = dict()
-        self.obj = TelethonRequest(None)
+        #  self.obj = TelethonRequest(None)
         self.lock = asyncio.Lock()
 
     async def check_telethon_session(self, websocket: WebSocket) -> None:
-        if not await self.obj.is_logged_in():
-            await self.send(websocket, {"event_type": SocketEvent.code_request.value})
-            await self.obj.send_code_request()
-            data = await websocket.receive_json()
-            await self.obj.logging_in(data.get("token", ""))
-            await self.obj.disconnect()
+        async with self.lock:
+            obj = TelethonRequest(None)
+            if not await obj.is_logged_in():
+                await self.send(websocket, {"event_type": SocketEvent.code_request.value})
+                await obj.send_code_request()
+                data = await websocket.receive_json()
+                await obj.logging_in(data.get("token", ""))
+                await obj.disconnect()
+            obj.session.close()
+            del obj
 
     async def run_task(self, message: SocketExchangeMessage) -> None:
         if not message.message.task_data:
@@ -72,10 +76,12 @@ class ConnectionManager:
             ).get(message.message.task_data.target)
             if not parse_obj:
                 return
-            instance = parse_obj(self.obj)
+            obj = TelethonRequest(None)
+            instance = parse_obj(obj)
             try:
                 res = await instance.search(**message.message.task_data.kwargs)
             except Exception:
+                print(traceback.format_exc())
                 res = [{"message": "Internal error"}]
             await self.broadcast(
                 data={
@@ -87,6 +93,8 @@ class ConnectionManager:
                 target_sockets=[str(s) for s in message.target_sockets if s],
                 except_sockets=[str(s) for s in message.except_sockets if s],
             )
+            obj.session.close()
+            del obj
 
     @QueueManager(
         [

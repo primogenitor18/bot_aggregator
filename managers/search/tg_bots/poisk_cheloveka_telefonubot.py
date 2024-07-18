@@ -27,7 +27,7 @@ class PoiskChelovekaTelefonuBot:
             return list()
     
         async with self.obj.client:
-            entity = await self.obj.client.get_entity("@Poisk_Cheloveka_TelefonuBot")
+            entity = await self.obj.client.get_entity("@NetLayBot")
             handle_obj = EventHandler(
                 fts=fts,
                 rules=[

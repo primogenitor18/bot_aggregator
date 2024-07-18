@@ -62,6 +62,8 @@ class EventHandler:
 
     async def save_result(self) -> None:
         #  self._result = [self.message_to_dict()]
+        if not self.event.message.media:
+            return
         await self.parse_report()
         await self.disconnect()
 
@@ -89,6 +91,8 @@ class EventHandler:
             for row in card.find_all("div", class_="row"):
                 _obj[row.find("div", class_="row_left").string] = row.find("div", class_="row_right").string
             self._result.append(_obj.copy())
+        if not self._result:
+            self._result.append({"message": "no data"})
 
     def message_to_dict(self) -> dict:
         res = dict()
