@@ -83,18 +83,22 @@ class ConnectionManager:
             except Exception:
                 print(traceback.format_exc())
                 res = [{"message": "Internal error"}]
-            await self.broadcast(
-                data={
-                    "event_type": message.message.event_type.value,
-                    "name": parse_obj._name,
-                    "data": res,
-                },
-                recipients_ids=message.recipients,
-                target_sockets=[str(s) for s in message.target_sockets if s],
-                except_sockets=[str(s) for s in message.except_sockets if s],
-            )
-            obj.session.close()
-            del obj
+            try:
+                await self.broadcast(
+                    data={
+                        "event_type": message.message.event_type.value,
+                        "name": parse_obj._name,
+                        "data": res,
+                    },
+                    recipients_ids=message.recipients,
+                    target_sockets=[str(s) for s in message.target_sockets if s],
+                    except_sockets=[str(s) for s in message.except_sockets if s],
+                )
+            except Exception:
+                pass
+            finally:
+                obj.session.close()
+                del obj
 
     @QueueManager(
         [

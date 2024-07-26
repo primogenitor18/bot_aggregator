@@ -1,4 +1,5 @@
 import re
+import traceback
 from dataclasses import dataclass, field
 from collections import defaultdict
 from bs4 import BeautifulSoup
@@ -82,7 +83,11 @@ class EventHandler:
         if not self.event.message.media:
             return
         report_data = await self.event.message.download_media(file=bytes)
-        report_content = report_data.decode("utf-8")
+        try:
+            report_content = report_data.decode("utf-8")
+        except Exception:
+            print(traceback.format_exc())
+            return
 
         soup = BeautifulSoup(report_content, "html.parser")
 
