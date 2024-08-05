@@ -54,6 +54,12 @@ class ConnectionManager:
         self.active_users: Dict[int, User] = dict()
         #  self.obj = TelethonRequest(None)
         self.lock = asyncio.Lock()
+        self.open_db_connections = list()
+
+    def reset_db_connections(self) -> None:
+        for con in self.open_db_connections:
+            con.close()
+        self.open_db_connections = list()
 
     async def check_telethon_session(self, websocket: WebSocket) -> None:
         async with self.lock:
@@ -76,7 +82,9 @@ class ConnectionManager:
             ).get(message.message.task_data.target)
             if not parse_obj:
                 return
+            self.reset_db_connections()
             obj = TelethonRequest(None)
+            self.open_db_connections.append(obj.session)
             instance = parse_obj(obj)
             try:
                 res = await instance.search(**message.message.task_data.kwargs)
