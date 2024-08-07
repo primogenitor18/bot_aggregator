@@ -18,8 +18,9 @@ class PoiskChelovekaTelefonuBot:
         "ogrn": "",
     }
 
-    def __init__(self, obj: TelethonRequest):
+    def __init__(self, obj: TelethonRequest, bot_name: str):
         self.obj = obj
+        self.bot_name = bot_name
 
     async def search(self, fts: str, search_type: str) -> list:
         _btn_text = self._buttons_search_type_map.get(search_type)
@@ -27,7 +28,7 @@ class PoiskChelovekaTelefonuBot:
             return list()
     
         async with self.obj.client:
-            entity = await self.obj.client.get_entity("@Dvsor_bot")
+            entity = await self.obj.client.get_entity(self.bot_name)
             handle_obj = EventHandler(
                 fts=fts,
                 rules=[

@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.asyncio.engine import AsyncConnection
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 
 from config import (
     DB_USER,
@@ -18,6 +19,7 @@ from config import (
 engine = create_async_engine(
     f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}",
     echo=False,
+    poolclass=AsyncAdaptedQueuePool,
 )
 async_session = sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False

@@ -33,3 +33,8 @@ REDIS_URI = os.environ.get("REDIS_URI", "")
 REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
 REDIS_DB = os.environ.get("REDIS_DB", 0)
 REDIS_PUBSUB_DB = os.environ.get("REDIS_PUBSUB_DB", 2)
+
+try:
+    DEBUG = bool(int(os.environ.get("DEBUG", 0)))
+except Exception:
+    DEBUG = False

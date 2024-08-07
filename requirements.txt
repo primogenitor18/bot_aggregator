@@ -50,3 +50,4 @@ PyJWT==2.8.0
 beautifulsoup4==4.12.2
 async-timeout==4.0.3
 git+https://github.com/Oper18/aioredis-py.git
+sqladmin[full]==0.18.0

@@ -15,6 +15,7 @@ from models.base import AnonymousUser
 from third_party.quick_osint import QuickOsintRequest
 from third_party.himera_search import HimeraSearchRequest
 from third_party.revengee import RevengeeRequest
+from third_party.aleph import AlephRequest
 
 from tasks.tg_bot_parse import run_bot_parsing
 
@@ -149,6 +150,40 @@ class SearchManager:
             action=SocketAction.task,
         )
         return {"items": [{"response": "Search in progress..."}]}, True
+
+    async def get_obj_alephrequest(self, fts: str) -> Optional[AlephRequest]:
+        provider = await self._get_provider_info("aleph")
+        if not provider:
+            return None
+        return AlephRequest(
+            url="https://aleph.occrp.org/api/2/entities",
+            headers=MappingProxyType({"Authorization": f"ApiKey {provider.auth_token}"}),
+        )
+
+    def _parse_aleph_response(self, req: dict) -> list:
+        res = list()
+        for obj in req.get("results", []):
+            _prepared_obj = dict()
+            for k, v in obj["properties"].items():
+                if isinstance(v, list):
+                    v = "; ".join([str(i) for i in v])
+                _prepared_obj[k] = v
+            _prepared_obj["collection_summary"] = obj["collection"]["summary"].replace("\n", "")
+            _prepared_obj["collection_summary"] = _prepared_obj["collection_summary"].split("-")
+            res.append(_prepared_obj.copy())
+        return res
+
+    async def alephrequest(
+        self, fts: str, search_type: str, *args, **kwargs
+    ) -> Tuple[dict, bool]:
+        res = dict()
+        obj = await self.get_obj_alephrequest(fts)
+        if not obj:
+            return res, False
+        st, res = await obj.search(fts, search_type)
+        if st >= 200 and st < 300:
+            return {"items": self._parse_aleph_response(res)}, True
+        return {}, False
 
     async def search(
         self,

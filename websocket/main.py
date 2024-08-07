@@ -12,7 +12,10 @@ from typing import Dict, List, Union
 
 from fastapi import FastAPI, WebSocket, Query, WebSocketDisconnect
 
-from models.models import User
+from sqlalchemy.future import select
+
+from models.models import User, Provider
+from models.session import get_session
 
 from util.util import dumps_converter
 
@@ -82,10 +85,18 @@ class ConnectionManager:
             ).get(message.message.task_data.target)
             if not parse_obj:
                 return
+            async with get_session() as s:
+                provider = (
+                    await s.execute(
+                        select(Provider)
+                        .filter(Provider.name == message.message.task_data.target)
+                    )
+                ).scalars().first()
+                bot_name = provider.auth_token if provider else "@Dvsor_bot"
             self.reset_db_connections()
             obj = TelethonRequest(None)
             self.open_db_connections.append(obj.session)
-            instance = parse_obj(obj)
+            instance = parse_obj(obj, bot_name)
             try:
                 res = await instance.search(**message.message.task_data.kwargs)
             except Exception:

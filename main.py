@@ -8,6 +8,8 @@ from fastapi import (
     status,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import sqladmin
 
 from response_models import Error40xResponse
 
@@ -21,12 +23,19 @@ from v1.provider.handlers.provider import router as provider_router
 from v1.search.handlers.search import router as search_router
 
 from redis.connector import OsintClientRedisConnection
+from backends import AdminAuthenticationBackend
+from models.session import engine, async_session
+
+from admin.users_admin import UserAdmin
+from admin.providers_admin import ProviderAdmin
 
 from config import (
     REDIS_URI,
     REDIS_PORT,
     REDIS_PUBSUB_DB,
     REDIS_DB,
+    SERVER_SECRET,
+    DEBUG,
 )
 
 
@@ -69,7 +78,7 @@ async def get_auth(request: Request, call_next, *args, **kwargs):
         try:
             user_type, token = request.headers.get("authorization").split(" ")
             code, reason, user_info = await AuthManager.check_token(token=token)
-        except:
+        except Exception:
             request.scope["auth"]["reason"] = "wrong token type"
         else:
             request.scope["user"] = user_info
@@ -89,3 +98,21 @@ async def get_auth(request: Request, call_next, *args, **kwargs):
         )
 
     return response
+
+
+admin_auth_backend = AdminAuthenticationBackend(secret_key=SERVER_SECRET)
+admin = sqladmin.Admin(
+    app,
+    engine,
+    session_maker=async_session,
+    authentication_backend=admin_auth_backend,
+    debug=DEBUG,
+)
+admin.add_view(UserAdmin)
+admin.add_view(ProviderAdmin)
+
+app.mount(
+    "/api/admin/statics",
+    StaticFiles(packages=["sqladmin"]),
+    name="static",
+)
