@@ -24,6 +24,7 @@ from config import USE_TELETHON
 from base_obj import send_socket_event
 from websocket.consts import SocketEvent, SocketAction
 from managers.search.tg_bots.poisk_cheloveka_telefonubot import PoiskChelovekaTelefonuBot
+from managers.search.tg_bots.orakulbot import OrakulBot
 
 
 class SearchManager:
@@ -142,6 +143,38 @@ class SearchManager:
                 "task_data": {
                     "action": "search",
                     "target": PoiskChelovekaTelefonuBot._name,
+                    "kwargs": {"fts": fts, "search_type": search_type},
+                }
+            },
+            target_sockets=[socket_id],
+            accept_users=[user_id],
+            action=SocketAction.task,
+        )
+        return {"items": [{"response": "Search in progress..."}]}, True
+
+    async def orakulbotrequest(
+        self,
+        fts: str,
+        search_type: str,
+        socket_id: int,
+        user_id: int,
+        background_tasks: Optional[BackgroundTasks] = None,
+        *args,
+        **kwargs,
+    ) -> Tuple[dict, bool]:
+        if not socket_id or not user_id or not background_tasks or not USE_TELETHON:
+            return {"items": [{"response": "No data"}]}, True
+        #  background_tasks.add_task(run_bot_parsing, fts, search_type, socket_id, user_id)
+        await send_socket_event(
+            redis_pubsub_con=kwargs["redis_connection"],
+            s=self.session,
+            data={
+                "event_type": SocketEvent.tg_bot_parse_result.value,
+                "name": "",
+                "data": list(),
+                "task_data": {
+                    "action": "search",
+                    "target": OrakulBot._name,
                     "kwargs": {"fts": fts, "search_type": search_type},
                 }
             },

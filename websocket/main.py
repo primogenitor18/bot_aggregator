@@ -45,11 +45,15 @@ from websocket.consts import (
 )
 
 from managers.search.tg_bots.poisk_cheloveka_telefonubot import PoiskChelovekaTelefonuBot
+from managers.search.tg_bots.orakulbot import OrakulBot
 
 
 class ConnectionManager:
     _actions = {
-        "search": {PoiskChelovekaTelefonuBot._name: PoiskChelovekaTelefonuBot}
+        "search": {
+            PoiskChelovekaTelefonuBot._name: PoiskChelovekaTelefonuBot,
+            OrakulBot._name: OrakulBot,
+        }
     }
 
     def __init__(self):
