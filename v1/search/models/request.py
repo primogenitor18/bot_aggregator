@@ -18,3 +18,7 @@ class SearchRequest(BaseModel):
         "auto",
         "ogrn",
     ] = Field("name")
+
+
+class TaskRestartRequest(BaseModel):
+    task_id: int

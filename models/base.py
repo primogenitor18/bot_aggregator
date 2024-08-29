@@ -70,3 +70,9 @@ class AnonymousUser(BaseModel):
 class DefaultRoles(Enum):
     operator = 0
     admin = 1
+
+
+class TaskStatus(Enum):
+    pending = 0
+    failed = 1
+    success = 2

@@ -10,7 +10,7 @@ from sqlalchemy import (
 from sqlalchemy.sql import expression
 from sqlalchemy.dialects import postgresql
 
-from .base import Base, BaseModel
+from .base import Base, BaseModel, TaskStatus
 
 
 class User(Base, BaseModel):
@@ -52,3 +52,27 @@ class Provider(Base, BaseModel):
     __table_args__ = (
         UniqueConstraint("name", "auth_token", name="uc_name_auth_token"),
     )
+
+
+class ParsingTasks(Base, BaseModel):
+    __tablename__ = "parsing_tasks"
+
+    id: Mapped[int] = mapped_column(
+        Integer(), primary_key=True, autoincrement=True
+    )
+    task_id: Mapped[str] = mapped_column(
+        String(64), nullable=False
+    )
+    filename: Mapped[str] = mapped_column(
+        String(128), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        Integer(), nullable=False, default=TaskStatus.pending, server_default="0"
+    )
+
+    @property
+    def status_str(self) -> str:
+        for v in TaskStatus.__members__.values():
+            if v.value == self.status:
+                return v.name
+        return ""

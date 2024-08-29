@@ -28,6 +28,7 @@ from models.session import engine, async_session
 
 from admin.users_admin import UserAdmin
 from admin.providers_admin import ProviderAdmin
+from admin.tasks_admin import ParsingTasksAdmin
 
 from config import (
     REDIS_URI,
@@ -36,6 +37,7 @@ from config import (
     REDIS_DB,
     SERVER_SECRET,
     DEBUG,
+    STATIC_DIR,
 )
 
 
@@ -110,9 +112,16 @@ admin = sqladmin.Admin(
 )
 admin.add_view(UserAdmin)
 admin.add_view(ProviderAdmin)
+admin.add_view(ParsingTasksAdmin)
 
 app.mount(
     "/api/admin/statics",
     StaticFiles(packages=["sqladmin"]),
+    name="admin-static",
+)
+
+app.mount(
+    "/static",
+    StaticFiles(directory=STATIC_DIR),
     name="static",
 )

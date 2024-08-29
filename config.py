@@ -38,3 +38,6 @@ try:
     DEBUG = bool(int(os.environ.get("DEBUG", 0)))
 except Exception:
     DEBUG = False
+
+STATIC_DIR = "static"
+os.makedirs(STATIC_DIR, exist_ok=True)
