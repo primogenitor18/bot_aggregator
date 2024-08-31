@@ -1,4 +1,6 @@
-from typing import List
+from datetime import datetime
+
+from typing import List, Union
 
 from pydantic import BaseModel
 
@@ -22,6 +24,8 @@ class ParsingTaskResponse(BaseModel):
     task_id: str
     filename: str
     status: str
+    created_at: Union[datetime, str]
+    full_report: str
 
 
 class ParsingTasksListResponse(BaseModel):

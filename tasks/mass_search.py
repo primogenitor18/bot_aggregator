@@ -12,7 +12,31 @@ from models.session import get_session
 
 from managers.search.manager import SearchManager
 
+from util.util import CleanedDict
+
 from config import STATIC_DIR
+
+
+async def make_full_report(task_id: str) -> None:
+    res = dict()
+    files = os.listdir(os.path.join(STATIC_DIR, "tasks", task_id, "report"))
+    for f in files:
+        async with aiofiles.open(
+            os.path.join(STATIC_DIR, "tasks", task_id, "report", f),
+            mode="r",
+            encoding="utf-8",
+            newline="",
+        ) as afp:
+            content = await afp.read()
+            data = json.loads(content)
+        res[f.split(".")[0]] = data.copy()
+    async with aiofiles.open(
+        os.path.join(STATIC_DIR, "tasks", task_id, "full_report.json"),
+        mode="w",
+        encoding="utf-8",
+        newline="",
+    ) as afp:
+        await afp.write(json.dumps(res))
 
 
 async def mass_search(
@@ -41,16 +65,18 @@ async def mass_search(
                     if reader.line_num < 2:
                         continue
                     res, st = await manager.search(row[0], provider, row[1], row[2])
+                    obj = CleanedDict(res)
                     async with aiofiles.open(
                         os.path.join(STATIC_DIR, "tasks", task_id, "report", f"{row[0]}.json"),
                         mode="w",
                         encoding="utf-8",
                         newline="",
                     ) as afp:
-                        await afp.write(json.dumps(res))
+                        await afp.write(json.dumps(obj.clean_data))
         except Exception:
             await s.execute(update(ParsingTasks).where(ParsingTasks.task_id == task_id).values(status=TaskStatus.failed.value))
         else:
             await s.execute(update(ParsingTasks).where(ParsingTasks.task_id == task_id).values(status=TaskStatus.success.value))
         finally:
             await s.commit()
+            await make_full_report(task_id)

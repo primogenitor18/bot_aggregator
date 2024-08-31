@@ -68,6 +68,7 @@ class ParsingTasksManager:
                     select(ParsingTasks)
                     .limit(limit)
                     .offset(offset)
+                    .order_by(ParsingTasks.created_at.desc())
                 )
             ).scalars().all()
             tasks_count = (

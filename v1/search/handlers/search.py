@@ -216,6 +216,8 @@ async def list_task_search_method(
                 task_id=t.task_id,
                 filename=os.path.join(STATIC_DIR, "tasks", t.task_id, t.filename),
                 status=t.status_str,
+                created_at=t.created_at,
+                full_report=os.path.join(STATIC_DIR, "tasks", t.task_id, "full_report.json") if os.path.exists(os.path.join(STATIC_DIR, "tasks", t.task_id, "full_report.json")) else "",
             )
             for t in tasks
         ],
