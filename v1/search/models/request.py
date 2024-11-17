@@ -17,6 +17,8 @@ class SearchRequest(BaseModel):
         "address",
         "auto",
         "ogrn",
+        "detect",
+        "search",
     ] = Field("name")
 
 

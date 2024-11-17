@@ -56,16 +56,21 @@ class EventHandler:
         except errors.rpcerrorlist.DataInvalidError:
             pass
 
-    async def send_message(self) -> None:
+    async def send_message(self, mes: str = "") -> None:
         if not self._sent_fts_request:
-            await self.event.client.send_message(self.event.chat, self.fts)
+            if not mes:
+                mes = self.fts
+            await self.event.client.send_message(self.event.chat, mes)
             self._sent_fts_request = True
 
-    async def save_result(self) -> None:
+    async def save_result(self, from_media: bool = True) -> None:
         #  self._result = [self.message_to_dict()]
-        if not self.event.message.media:
+        if from_media and not self.event.message.media:
             return
-        await self.parse_report()
+        if from_media:
+            await self.parse_report()
+        else:
+            await self.parse_report_message()
         await self.disconnect()
 
     async def get_action(self) -> None:
@@ -79,7 +84,7 @@ class EventHandler:
                         await self.event.client.connect()
                         await method(**rule.parameters)
 
-    async def parse_report(self) -> list:
+    async def parse_report(self) -> None:
         if not self.event.message.media:
             return
         report_data = await self.event.message.download_media(file=bytes)
@@ -98,6 +103,13 @@ class EventHandler:
             self._result.append(_obj.copy())
         if not self._result:
             self._result.append({"message": "no data"})
+
+    async def parse_report_message(self) -> None:
+        if not self.event.message.message:
+            return
+        res = self.message_to_dict()
+        if res:
+            self._result.append(res)
 
     def message_to_dict(self) -> dict:
         res = dict()

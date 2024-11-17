@@ -46,6 +46,7 @@ from websocket.consts import (
 
 from managers.search.tg_bots.poisk_cheloveka_telefonubot import PoiskChelovekaTelefonuBot
 from managers.search.tg_bots.orakulbot import OrakulBot
+from managers.search.tg_bots.dohodyagabot import DohodyagaBot
 
 
 class ConnectionManager:
@@ -53,6 +54,7 @@ class ConnectionManager:
         "search": {
             PoiskChelovekaTelefonuBot._name: PoiskChelovekaTelefonuBot,
             OrakulBot._name: OrakulBot,
+            DohodyagaBot._name: DohodyagaBot,
         }
     }
 

@@ -16,6 +16,7 @@ from third_party.quick_osint import QuickOsintRequest
 from third_party.himera_search import HimeraSearchRequest
 from third_party.revengee import RevengeeRequest
 from third_party.aleph import AlephRequest
+from third_party.search4face import Search4Face
 
 from tasks.tg_bot_parse import run_bot_parsing
 
@@ -217,6 +218,22 @@ class SearchManager:
         if st >= 200 and st < 300:
             return {"items": self._parse_aleph_response(res)}, True
         return {}, False
+
+    async def get_obj_search4facerequest(self, fts: str) -> Optional[Search4Face]:
+        provider = await self._get_provider_info("search4face")
+        if not provider:
+            return None
+        return Search4Face(provider.auth_token)
+
+    async def search4facerequest(
+        self, fts: str, search_type: str, *args, **kwargs
+    ) -> Tuple[dict, bool]:
+        res = {"items": []}
+        obj = await self.get_obj_search4facerequest(fts)
+        if not obj:
+            return res, False
+        st, search_res = await obj.search(fts, search_type)
+        return search_res, True
 
     async def search(
         self,
