@@ -1,5 +1,6 @@
 import uuid
 import urllib.parse
+import json
 from typing import Optional, Tuple, Union
 from types import MappingProxyType
 from bs4 import BeautifulSoup
@@ -16,6 +17,7 @@ from third_party.quick_osint import QuickOsintRequest
 from third_party.himera_search import HimeraSearchRequest
 from third_party.revengee import RevengeeRequest
 from third_party.aleph import AlephRequest
+from third_party.infotrackpeople import InfoTrackPeopleRequest
 
 from tasks.tg_bot_parse import run_bot_parsing
 
@@ -216,6 +218,41 @@ class SearchManager:
         st, res = await obj.search(fts, search_type)
         if st >= 200 and st < 300:
             return {"items": self._parse_aleph_response(res)}, True
+        return {}, False
+
+    async def get_obj_infotrackpeoplerequest(self, fts: str) -> Optional[InfoTrackPeopleRequest]:
+        provider = await self._get_provider_info("infotrackpeople")
+        if not provider:
+            return None
+        return InfoTrackPeopleRequest(headers=MappingProxyType({"x-api-key": f"{provider.auth_token}"}))
+
+    def _parse_infotrackpeople_response(self, req: dict) -> list:
+        res = list()
+        for base, obj in req.get("unique", {}).items():
+            if not obj:
+                continue
+            if isinstance(obj[0], dict):
+                obj = "\n".join(
+                    [
+                        ",".join(f"{k}: {v}" for k, v in it.items())
+                        for it in obj
+                    ]
+                )
+            else:
+                obj = "\n".join([it for it in obj])
+            res.append({base: obj})
+        return res
+
+    async def infotrackpeoplerequest(
+        self, fts: str, country: str, search_type: str, *args, **kwargs
+    ) -> Tuple[dict, bool]:
+        res = dict()
+        obj = await self.get_obj_infotrackpeoplerequest(fts)
+        if not obj:
+            return res, False
+        st, res = await obj.search(fts, search_type, country)
+        if st >= 200 and st < 300:
+            return {"items": self._parse_infotrackpeople_response(res)}, True
         return {}, False
 
     async def search(
