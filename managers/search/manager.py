@@ -18,6 +18,7 @@ from third_party.himera_search import HimeraSearchRequest
 from third_party.revengee import RevengeeRequest
 from third_party.aleph import AlephRequest
 from third_party.infotrackpeople import InfoTrackPeopleRequest
+from third_party.osintkit import OsintKitRequest
 
 from tasks.tg_bot_parse import run_bot_parsing
 
@@ -253,6 +254,35 @@ class SearchManager:
         st, res = await obj.search(fts, search_type, country)
         if st >= 200 and st < 300:
             return {"items": self._parse_infotrackpeople_response(res)}, True
+        return {}, False
+
+    async def get_obj_osintkitrequest(self, fts: str) -> Optional[OsintKitRequest]:
+        provider = await self._get_provider_info("osintkit")
+        if not provider:
+            return None
+        return OsintKitRequest(headers=MappingProxyType({"X-API-KEY": provider.auth_token}))
+
+    async def osintkitrequest(
+        self, fts: str, country: str, search_type: str, *args, **kwargs
+    ) -> Tuple[dict, bool]:
+        res = dict()
+        obj = await self.get_obj_osintkitrequest(fts)
+        if not obj:
+            return res, False
+        st, res = await obj.search(fts, search_type, country)
+        if st >= 200 and st < 300:
+            data = {"items": []}
+            for obj in res.get("data", []):
+                _obj = dict()
+                for k, v in obj.items():
+                    if isinstance(v, dict):
+                        _obj[k] = json.dumps(v)
+                    elif isinstance(v, list):
+                        _obj[k] = "; ".join(str(i) for i in v)
+                    else:
+                        _obj[k] = v
+                data["items"].append(_obj.copy())
+            return data, True
         return {}, False
 
     async def search(
