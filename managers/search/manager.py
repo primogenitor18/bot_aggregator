@@ -275,6 +275,8 @@ class SearchManager:
             for obj in res.get("data", []):
                 _obj = dict()
                 for k, v in obj.items():
+                    if not v:
+                        continue
                     if isinstance(v, dict):
                         _obj[k] = json.dumps(v)
                     elif isinstance(v, list):
