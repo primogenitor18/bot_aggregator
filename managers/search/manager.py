@@ -19,6 +19,7 @@ from third_party.revengee import RevengeeRequest
 from third_party.aleph import AlephRequest
 from third_party.infotrackpeople import InfoTrackPeopleRequest
 from third_party.osintkit import OsintKitRequest
+from third_party.keyscore import KeyscoreRequest
 
 from tasks.tg_bot_parse import run_bot_parsing
 
@@ -284,6 +285,32 @@ class SearchManager:
                     else:
                         _obj[k] = v
                 data["items"].append(_obj.copy())
+            return data, True
+        return {}, False
+
+    async def get_obj_keyscorerequest(self, fts: str) -> Optional[OsintKitRequest]:
+        provider = await self._get_provider_info("osintkit")
+        if not provider:
+            return None
+        return OsintKitRequest(
+            headers=MappingProxyType(
+                {"Authorization": provider.auth_token, "Content-Type": "application/json"}
+            )
+        )
+
+    async def keyscorerequest(
+        self, fts: str, country: str, search_type: str, *args, **kwargs
+    ) -> Tuple[dict, bool]:
+        res = dict()
+        obj = await self.get_obj_keyscorerequest(fts)
+        if not obj:
+            return res, False
+        st, res = await obj.search(fts, search_type, country)
+        if st >= 200 and st < 300:
+            data = {"items": []}
+            for log in res.get("results", {}).values():
+                for obj in log:
+                    data["items"].append(obj.copy())
             return data, True
         return {}, False
 
