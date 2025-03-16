@@ -1,3 +1,4 @@
+import os
 import traceback
 from contextlib import asynccontextmanager
 
@@ -74,6 +75,7 @@ app.include_router(search_router)
 
 @app.middleware("http")
 async def get_auth(request: Request, call_next, *args, **kwargs):
+    request.scope["scheme"] = "http" if os.ennviron.get("ENV", "prod") == "local" else "https"
     request.scope["user"] = AnonymousUser()
     request.scope["auth"] = {"status": False, "reason": ""}
     if request.headers.get("authorization"):
