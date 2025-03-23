@@ -20,6 +20,7 @@ from third_party.aleph import AlephRequest
 from third_party.infotrackpeople import InfoTrackPeopleRequest
 from third_party.osintkit import OsintKitRequest
 from third_party.keyscore import KeyscoreRequest
+from third_party.teletype import TeletypeRequest
 
 from tasks.tg_bot_parse import run_bot_parsing
 
@@ -288,13 +289,13 @@ class SearchManager:
             return data, True
         return {}, False
 
-    async def get_obj_keyscorerequest(self, fts: str) -> Optional[OsintKitRequest]:
-        provider = await self._get_provider_info("osintkit")
+    async def get_obj_keyscorerequest(self, fts: str) -> Optional[KeyscoreRequest]:
+        provider = await self._get_provider_info("keyscore")
         if not provider:
             return None
-        return OsintKitRequest(
+        return KeyscoreRequest(
             headers=MappingProxyType(
-                {"Authorization": provider.auth_token, "Content-Type": "application/json"}
+                {"Authorization": f"Bearer {provider.auth_token}", "Content-Type": "application/json"}
             )
         )
 
@@ -310,6 +311,34 @@ class SearchManager:
             data = {"items": []}
             for log in res.get("results", {}).values():
                 for obj in log:
+                    data["items"].append(obj.copy())
+            return data, True
+        return {}, False
+
+    async def get_obj_teletyperequest(self, fts: str) -> Optional[TeletypeRequest]:
+        provider = await self._get_provider_info("teletype")
+        if not provider:
+            return None
+        return TeletypeRequest(
+            headers=MappingProxyType(
+                {"Authorization": provider.auth_token, "Content-Type": "application/json"}
+            )
+        )
+
+    async def teletyperequest(
+        self, fts: str, country: str, search_type: str, *args, **kwargs
+    ) -> Tuple[dict, bool]:
+        res = dict()
+        obj = await self.get_obj_teletyperequest(fts)
+        if not obj:
+            return res, False
+        st, res = await obj.search(fts, search_type, country)
+        if st >= 200 and st < 300:
+            data = {"items": []}
+            if res.get("count", 0):
+                return data, True
+            for db in res.get("items", []):
+                for obj in db.get("hits", {}).get("items", []):
                     data["items"].append(obj.copy())
             return data, True
         return {}, False
