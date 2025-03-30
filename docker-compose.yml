@@ -58,6 +58,7 @@ services:
       - TG_PHONE=${TG_PHONE}
       - USE_TELETHON=${USE_TELETHON}
       - REDIS_URI=osint_client_redis
+      - PROTOCOL=${PROTOCOL}
     networks:
       - osint_client-network
     depends_on:
