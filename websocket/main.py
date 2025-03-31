@@ -56,29 +56,31 @@ class ConnectionManager:
         }
     }
 
-    def __init__(self):
+    def __init__(self, obj: TelethonRequest = None):
         self.active_connections: Dict[int, List[WebSocket]] = dict()
         self.active_users: Dict[int, User] = dict()
-        #  self.obj = TelethonRequest(None)
         self.lock = asyncio.Lock()
-        self.open_db_connections = list()
+        self.obj = obj
+        self.require_login = True
 
-    def reset_db_connections(self) -> None:
-        for con in self.open_db_connections:
-            con.close()
-        self.open_db_connections = list()
+    @classmethod
+    async def create_instance(cls) -> "ConnectionManager":
+        instance = cls(obj=TelethonRequest(None))
+        if await instance.obj.is_logged_in():
+            instance.require_login = False
+        return instance
+
+    async def delete_instance(self) -> None:
+        await self.obj.disconnect()
+        self.obj.session.close()
 
     async def check_telethon_session(self, websocket: WebSocket) -> None:
         async with self.lock:
-            obj = TelethonRequest(None)
-            if not await obj.is_logged_in():
+            if self.require_login:
                 await self.send(websocket, {"event_type": SocketEvent.code_request.value})
-                await obj.send_code_request()
+                await self.obj.send_code_request()
                 data = await websocket.receive_json()
-                await obj.logging_in(data.get("token", ""))
-                await obj.disconnect()
-            obj.session.close()
-            del obj
+                await self.obj.logging_in(data.get("token", ""))
 
     async def run_task(self, message: SocketExchangeMessage) -> None:
         if not message.message.task_data:
@@ -97,10 +99,7 @@ class ConnectionManager:
                     )
                 ).scalars().first()
                 bot_name = provider.auth_token if provider else "@Dvsor_bot"
-            self.reset_db_connections()
-            obj = TelethonRequest(None)
-            self.open_db_connections.append(obj.session)
-            instance = parse_obj(obj, bot_name)
+            instance = parse_obj(self.obj, bot_name)
             try:
                 res = await instance.search(**message.message.task_data.kwargs)
             except Exception:
@@ -119,9 +118,6 @@ class ConnectionManager:
                 )
             except Exception:
                 pass
-            finally:
-                obj.session.close()
-                del obj
 
     @QueueManager(
         [
@@ -161,7 +157,7 @@ class ConnectionManager:
             )
 
     async def connect(
-            self, websocket: WebSocket, user: User
+        self, websocket: WebSocket, user: User
     ) -> None:
         await websocket.accept()
         if not self.active_connections.get(user.id):
@@ -244,7 +240,7 @@ class ConnectionManager:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.manager = ConnectionManager()
+    app.manager = await ConnectionManager.create_instance()
     app.listener_task = asyncio.create_task(app.manager.read_queue_message())
     yield
     app.listener_task.cancel()
@@ -272,5 +268,5 @@ async def websocket_endpoint(
             await websocket.receive_json()
     except WebSocketDisconnect:
         await websocket.app.manager.disconnect(websocket, user)
-    except Exception as e:
+    except Exception:
         print("websocket_endpoint: ", traceback.format_exc())
