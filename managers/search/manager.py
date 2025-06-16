@@ -21,13 +21,14 @@ from third_party.infotrackpeople import InfoTrackPeopleRequest
 from third_party.osintkit import OsintKitRequest
 from third_party.keyscore import KeyscoreRequest
 from third_party.teletype import TeletypeRequest
+from third_party.opensanctions_db import OpensanctionsDbRequest
 
 from tasks.tg_bot_parse import run_bot_parsing
 
 from config import USE_TELETHON
 
 from base_obj import send_socket_event
-from websocket.consts import SocketEvent, SocketAction
+from websocket_app.consts import SocketEvent, SocketAction
 from managers.search.tg_bots.poisk_cheloveka_telefonubot import PoiskChelovekaTelefonuBot
 from managers.search.tg_bots.orakulbot import OrakulBot
 
@@ -41,14 +42,17 @@ class SearchManager:
 
     async def _get_provider_info(self, provider: str) -> Optional[Provider]:
         return (
-            await self.session.execute(
-                select(Provider)
-                .filter(
-                    Provider.name == provider,
-                    Provider.accessed_role <= self.user.role,
+            (
+                await self.session.execute(
+                    select(Provider).filter(
+                        Provider.name == provider,
+                        Provider.accessed_role <= self.user.role,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
     async def get_obj_quickosintrequest(self, fts: str) -> Optional[QuickOsintRequest]:
         provider = await self._get_provider_info("quickosint")
@@ -60,7 +64,7 @@ class SearchManager:
                     "Authorization": f"Bearer {provider.auth_token}",
                     "X-ClientId": uuid.uuid4().hex,
                 }
-            ),
+            )
         )
 
     async def quickosintrequest(
@@ -75,7 +79,9 @@ class SearchManager:
             return res, True
         return {}, False
 
-    async def get_obj_himerasearchrequest(self, fts: str) -> Optional[HimeraSearchRequest]:
+    async def get_obj_himerasearchrequest(
+        self, fts: str
+    ) -> Optional[HimeraSearchRequest]:
         provider = await self._get_provider_info("himerasearch")
         if not provider:
             return None
@@ -112,7 +118,9 @@ class SearchManager:
             person_info = {"Source": columns[-2].get_text().replace("\n", "")}
             for r in columns[2].find_all("tr"):
                 cs = r.find_all("td")
-                person_info[cs[0].get_text().replace("\n", "")] = cs[1].get_text().replace("\n", "")
+                person_info[cs[0].get_text().replace("\n", "")] = (
+                    cs[1].get_text().replace("\n", "")
+                )
             _item.update(person_info)
             res.append(_item.copy())
         return res
@@ -123,7 +131,9 @@ class SearchManager:
     async def revengeerequest(self, fts: str, *args, **kwargs) -> Tuple[dict, bool]:
         obj = await self.get_obj_revengeerequest(fts)
         st, search_res = await obj.search(fts)
-        return {"items": self._parse_revengee_response(search_res.get("response", ""))}, True
+        return {
+            "items": self._parse_revengee_response(search_res.get("response", ""))
+        }, True
 
     async def poiskchelovekatelefonubotrequest(
         self,
@@ -149,7 +159,7 @@ class SearchManager:
                     "action": "search",
                     "target": PoiskChelovekaTelefonuBot._name,
                     "kwargs": {"fts": fts, "search_type": search_type},
-                }
+                },
             },
             target_sockets=[socket_id],
             accept_users=[user_id],
@@ -181,7 +191,7 @@ class SearchManager:
                     "action": "search",
                     "target": OrakulBot._name,
                     "kwargs": {"fts": fts, "search_type": search_type},
-                }
+                },
             },
             target_sockets=[socket_id],
             accept_users=[user_id],
@@ -206,8 +216,12 @@ class SearchManager:
                 if isinstance(v, list):
                     v = "; ".join([str(i) for i in v])
                 _prepared_obj[k] = v
-            _prepared_obj["collection_summary"] = obj["collection"]["summary"].replace("\n", "")
-            _prepared_obj["collection_summary"] = _prepared_obj["collection_summary"].split("-")
+            _prepared_obj["collection_summary"] = obj["collection"]["summary"].replace(
+                "\n", ""
+            )
+            _prepared_obj["collection_summary"] = _prepared_obj[
+                "collection_summary"
+            ].split("-")
             res.append(_prepared_obj.copy())
         return res
 
@@ -223,11 +237,15 @@ class SearchManager:
             return {"items": self._parse_aleph_response(res)}, True
         return {}, False
 
-    async def get_obj_infotrackpeoplerequest(self, fts: str) -> Optional[InfoTrackPeopleRequest]:
+    async def get_obj_infotrackpeoplerequest(
+        self, fts: str
+    ) -> Optional[InfoTrackPeopleRequest]:
         provider = await self._get_provider_info("infotrackpeople")
         if not provider:
             return None
-        return InfoTrackPeopleRequest(headers=MappingProxyType({"x-api-key": f"{provider.auth_token}"}))
+        return InfoTrackPeopleRequest(
+            headers=MappingProxyType({"x-api-key": f"{provider.auth_token}"})
+        )
 
     def _parse_infotrackpeople_response(self, req: dict) -> list:
         res = list()
@@ -236,10 +254,7 @@ class SearchManager:
                 continue
             if isinstance(obj[0], dict):
                 obj = "\n".join(
-                    [
-                        ",".join(f"{k}: {v}" for k, v in it.items())
-                        for it in obj
-                    ]
+                    [",".join(f"{k}: {v}" for k, v in it.items()) for it in obj]
                 )
             else:
                 obj = "\n".join([it for it in obj])
@@ -262,7 +277,9 @@ class SearchManager:
         provider = await self._get_provider_info("osintkit")
         if not provider:
             return None
-        return OsintKitRequest(headers=MappingProxyType({"X-API-KEY": provider.auth_token}))
+        return OsintKitRequest(
+            headers=MappingProxyType({"X-API-KEY": provider.auth_token})
+        )
 
     async def osintkitrequest(
         self, fts: str, country: str, search_type: str, *args, **kwargs
@@ -295,7 +312,10 @@ class SearchManager:
             return None
         return KeyscoreRequest(
             headers=MappingProxyType(
-                {"Authorization": f"Bearer {provider.auth_token}", "Content-Type": "application/json"}
+                {
+                    "Authorization": f"Bearer {provider.auth_token}",
+                    "Content-Type": "application/json",
+                }
             )
         )
 
@@ -341,6 +361,27 @@ class SearchManager:
                 for obj in db.get("hits", {}).get("items", []):
                     data["items"].append(obj.copy())
             return data, True
+        return {}, False
+
+    async def get_obj_opensanctionsdbrequest(
+        self, fts: str
+    ) -> Optional[OpensanctionsDbRequest]:
+        provider = await self._get_provider_info("opensanctionsdb")
+        if not provider:
+            return None
+        url, username, password = provider.auth_token.split("|")
+        return OpensanctionsDbRequest(url, username, password)
+
+    async def opensanctionsdbrequest(
+        self, fts: str, country: str, search_type: str, *args, **kwargs
+    ) -> Tuple[dict, bool]:
+        res = dict()
+        obj = await self.get_obj_keyscorerequest(fts)
+        if not obj:
+            return res, False
+        st, res = await obj.search(fts, search_type, country)
+        if st >= 200 and st < 300:
+            return res, True
         return {}, False
 
     async def search(
