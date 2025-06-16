@@ -23,21 +23,11 @@ from managers.auth.manager import AuthManager
 
 from third_party.telethon_client import TelethonRequest
 
-from config import (
-    USE_TELETHON,
-    REDIS_URI,
-    REDIS_PORT,
-    REDIS_PUBSUB_DB,
-    WEBSOCKET_CHANNEL,
-)
+from config import USE_TELETHON, REDIS_URI, REDIS_PORT, REDIS_PUBSUB_DB, WEBSOCKET_CHANNEL
 
-from redis.wrapper import (
-    QueueManager,
-    RedisConnectionInfo,
-    RedisConnectionTransportInfo,
-)
+from redis.wrapper import QueueManager, RedisConnectionInfo, RedisConnectionTransportInfo
 
-from websocket.consts import (
+from websocket_app.consts import (
     SocketEvent,
     SocketExchangeMessage,
     SocketMessage,
@@ -86,18 +76,23 @@ class ConnectionManager:
         if not message.message.task_data:
             return
         async with self.lock:
-            parse_obj = self._actions.get(
-                message.message.task_data.action, {}
-            ).get(message.message.task_data.target)
+            parse_obj = self._actions.get(message.message.task_data.action, {}).get(
+                message.message.task_data.target
+            )
             if not parse_obj:
                 return
             async with get_session() as s:
                 provider = (
-                    await s.execute(
-                        select(Provider)
-                        .filter(Provider.name == message.message.task_data.target)
+                    (
+                        await s.execute(
+                            select(Provider).filter(
+                                Provider.name == message.message.task_data.target
+                            )
+                        )
                     )
-                ).scalars().first()
+                    .scalars()
+                    .first()
+                )
                 bot_name = provider.auth_token if provider else "@Dvsor_bot"
             instance = parse_obj(self.obj, bot_name)
             try:
@@ -132,17 +127,13 @@ class ConnectionManager:
                         conn_type="create_channel",
                         channel=WEBSOCKET_CHANNEL,
                         main_listener=True,
-                    ),
+                    )
                 ],
                 main_listener=True,
-            ),
-        ],
+            )
+        ]
     )
-    async def read_queue_message(
-        self,
-        message: dict,
-        **kwargs,
-    ) -> None:
+    async def read_queue_message(self, message: dict, **kwargs) -> None:
         if not message:
             return
         message = SocketExchangeMessage.validate(message)
@@ -156,21 +147,20 @@ class ConnectionManager:
                 except_sockets=[str(s) for s in message.except_sockets if s],
             )
 
-    async def connect(
-        self, websocket: WebSocket, user: User
-    ) -> None:
+    async def connect(self, websocket: WebSocket, user: User) -> None:
         await websocket.accept()
         if not self.active_connections.get(user.id):
             self.active_connections[user.id] = list()
             self.active_users[user.id] = user
         self.active_connections[user.id].append(websocket)
-        await self.send(websocket, {"socket_id": id(websocket), "event_type": SocketEvent.connect.value})
+        await self.send(
+            websocket,
+            {"socket_id": id(websocket), "event_type": SocketEvent.connect.value},
+        )
         if USE_TELETHON:
             await self.check_telethon_session(websocket)
 
-    async def disconnect(
-            self, websocket: WebSocket, user: User
-    ) -> None:
+    async def disconnect(self, websocket: WebSocket, user: User) -> None:
         self.active_connections[user.id].remove(websocket)
         if not self.active_connections[user.id]:
             self.active_users.pop(user.id, None)
@@ -180,10 +170,7 @@ class ConnectionManager:
                 print("disconnect: ", traceback.format_exc())
 
     def _filter_accept_sockets(
-            self,
-            user_id: int,
-            target_sockets: List[str] = [],
-            except_sockets: List[str] = [],
+        self, user_id: int, target_sockets: List[str] = [], except_sockets: List[str] = []
     ) -> List[WebSocket]:
         _recipients = list()
         for connection in self.active_connections.get(user_id, []):
@@ -195,35 +182,31 @@ class ConnectionManager:
         return _recipients
 
     def _filter_recipients_sockets(
-            self,
-            recipients_ids: List[int] = [],
-            target_sockets: List[str] = [],
-            except_sockets: List[str] = [],
+        self,
+        recipients_ids: List[int] = [],
+        target_sockets: List[str] = [],
+        except_sockets: List[str] = [],
     ) -> List[WebSocket]:
         _recipients = list()
         for recipient_id in recipients_ids:
             _recipients.extend(
-                self._filter_accept_sockets(
-                    recipient_id, target_sockets, except_sockets
-                )
+                self._filter_accept_sockets(recipient_id, target_sockets, except_sockets)
             )
         return _recipients
 
     async def broadcast(
-            self,
-            data: dict,
-            recipients_ids: List[int] = [],
-            target_sockets: List[str] = [],
-            except_sockets: List[str] = [],
+        self,
+        data: dict,
+        recipients_ids: List[int] = [],
+        target_sockets: List[str] = [],
+        except_sockets: List[str] = [],
     ) -> None:
         for connection in self._filter_recipients_sockets(
-            recipients_ids, target_sockets, except_sockets,
+            recipients_ids, target_sockets, except_sockets
         ):
             await self.send(connection, data)
 
-    async def decline_connection(
-        self, websocket: WebSocket, data: dict
-    ) -> None:
+    async def decline_connection(self, websocket: WebSocket, data: dict) -> None:
         await websocket.accept()
         await self.send(websocket, data)
         await websocket.close()
@@ -255,12 +238,13 @@ app = FastAPI(title="API", version="1.0", lifespan=lifespan)
 
 @app.websocket("/websocket")
 async def websocket_endpoint(
-    websocket: WebSocket,
-    token: str = Query("", description="Auth token"),
+    websocket: WebSocket, token: str = Query("", description="Auth token")
 ):
     status_code, reason, user = await AuthManager.check_token(token)
     if user.is_anonymous:
-        await websocket.app.manager.decline_connection(websocket, {"status": status_code, "reason": reason})
+        await websocket.app.manager.decline_connection(
+            websocket, {"status": status_code, "reason": reason}
+        )
         return
     await websocket.app.manager.connect(websocket, user)
     try:

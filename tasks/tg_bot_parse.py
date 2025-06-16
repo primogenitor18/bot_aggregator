@@ -4,22 +4,19 @@ from third_party.telethon_client import TelethonRequest
 
 from redis.connector import OsintClientRedisConnection
 
-from config import (
-    REDIS_URI,
-    REDIS_PORT,
-    REDIS_PUBSUB_DB,
-    REDIS_DB,
-)
+from config import REDIS_URI, REDIS_PORT, REDIS_PUBSUB_DB, REDIS_DB
 
 from .consts import BOT_PARSE_OBJS_ARR
 
 from base_obj import send_socket_event
 
-from websocket.consts import SocketEvent
+from websocket_app.consts import SocketEvent
 
 
 async def run_bot_parsing(fts: str, search_type: str, socket_id: int, user_id: int):
-    redis_connection = OsintClientRedisConnection(host=REDIS_URI, port=REDIS_PORT, db=REDIS_DB)
+    redis_connection = OsintClientRedisConnection(
+        host=REDIS_URI, port=REDIS_PORT, db=REDIS_DB
+    )
     await redis_connection.add_transport(conn_name="redis_pubsub_con", db=REDIS_PUBSUB_DB)
     obj = TelethonRequest(None)
     async with get_session() as s:

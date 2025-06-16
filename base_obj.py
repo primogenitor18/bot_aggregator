@@ -12,7 +12,7 @@ from config import LOCAL_SALT, WEBSOCKET_CHANNEL
 from models.models import User
 from models.session import AsyncSession
 
-from websocket.consts import SocketAction
+from websocket_app.consts import SocketAction
 
 
 def password_hash(password, salt):
@@ -23,7 +23,11 @@ def password_hash(password, salt):
 
 def password_gen():
     password = uuid.uuid4().hex[:8]
-    password = random.choice(string.ascii_uppercase) + password + random.choice(string.ascii_uppercase)
+    password = (
+        random.choice(string.ascii_uppercase)
+        + password
+        + random.choice(string.ascii_uppercase)
+    )
     return password
 
 
@@ -41,13 +45,10 @@ async def send_socket_event(
     if only_accept_users:
         recipients_filter = User.id.in_(accept_users)
     else:
-        recipients_filter = and_(
-            User.id.in_(accept_users),
-            ~User.id.in_(exclude_users),
-        )
+        recipients_filter = and_(User.id.in_(accept_users), ~User.id.in_(exclude_users))
     recipients = (
-        await s.execute(select(User.id).filter(recipients_filter))
-    ).scalars().all()
+        (await s.execute(select(User.id).filter(recipients_filter))).scalars().all()
+    )
     await redis_pubsub_con.publish_json(
         WEBSOCKET_CHANNEL,
         {
