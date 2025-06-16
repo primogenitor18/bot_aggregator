@@ -376,7 +376,7 @@ class SearchManager:
         self, fts: str, country: str, search_type: str, *args, **kwargs
     ) -> Tuple[dict, bool]:
         res = dict()
-        obj = await self.get_obj_keyscorerequest(fts)
+        obj = await self.get_obj_opensanctionsdbrequest(fts)
         if not obj:
             return res, False
         st, res = await obj.search(fts, search_type, country)
